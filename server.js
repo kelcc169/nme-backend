@@ -13,7 +13,7 @@ mongoose.connect('mongodb://localhost/nme-backend');
 
 //get all parent
 app.get('/bookshelves', (req, res) => {
-  Bookshelf.find({}, function (err, bookshelves) {
+  Bookshelf.find({}, (err, bookshelves) => {
     if (err) res.json(err)
     res.json(bookshelves)
   });
@@ -21,7 +21,7 @@ app.get('/bookshelves', (req, res) => {
 
 //get one parent and its children
 app.get('/bookshelves/:id', (req, res) => {
-  Bookshelf.findById(req.params.id).populate('books').exec(function (err, bookshelf) {
+  Bookshelf.findById(req.params.id).populate('books').exec( (err, bookshelf) => {
     if (err) res.json(err)
     res.json(bookshelf)
   });
@@ -29,10 +29,11 @@ app.get('/bookshelves/:id', (req, res) => {
 
 //create a parent
 app.post('/bookshelves', (req, res) => {
-  Bookshelf.create({
+  let shelf = new Bookshelf ({
     location: req.body.location,
     size: req.body.size
-  }, function (err, shelf) {
+  });
+  shelf.save((err, shelf) => {
     if (err) res.json(err);
     res.json(shelf)
   });
@@ -40,15 +41,21 @@ app.post('/bookshelves', (req, res) => {
 
 //update one parent
 app.put('/bookshelves/:id', (req, res) => {
-  Bookshelf.findByIdAndUpdate(req.params.id, {size: 'short'}, {new: true}, function (err, shelf) {
+  Bookshelf.findByIdAndUpdate(req.params.id, {
+    location: req.body.location,
+    size: req.body.size
+  }, {
+    new: true
+  }, (err, shelf) => {
     if (err) res.json(err)
     res.json(shelf)
   });
 });
 
+// FIX ME
 //delete one parent
 app.delete('/bookshelves/:id', (req, res) => {
-  Bookshelf.findByIdAndDelete(req.params.id, function (err) {
+  Bookshelf.findByIdAndDelete(req.params.id, (err) => {
     if (err) res.json(err)
     res.json({message: 'deleted!'})
   });
@@ -56,15 +63,17 @@ app.delete('/bookshelves/:id', (req, res) => {
 
 //create a child
 app.post('/bookshelves/:id/book', (req, res) => {
-  Bookshelf.findById(req.params.id, function (err, shelf) {
-    Book.create({title: req.body.title, author: req.body.author, genre: req.body.genre}, function (err, book) {
-      shelf.books.push(book);
-      shelf.save(function (err) {
-        book.bookshelf.push(shelf);
-        book.save(function (err) {
+  Bookshelf.findById(req.params.id, (err, shelf) => {
+    let newBook = new Book({
+      title: req.body.title, 
+      author: req.body.author, 
+      genre: req.body.genre, 
+    })
+      newBook.save( (err, book) => {
+        shelf.books.push(book)
+        shelf.save( (err, shelf) => {
           if (err) res.json(err)
           res.json(shelf)
-        });
       });
     });
   });
@@ -72,25 +81,39 @@ app.post('/bookshelves/:id/book', (req, res) => {
 
 //read one child
 app.get('/books/:id', (req, res) => {
-  Book.findById(req.params.id).populate('bookshelf').exec(function (err, book) {
+  Book.findById(req.params.id).populate('bookshelf').exec( (err, book) => {
     if (err) res.json(err)
     res.json(book)
   });
 });
 
 //delete one child
+// app.delete('/bookshelves/:sid/book/:bid', (req, res) => {
+//   Bookshelf.findById(req.params.sid, (err, shelf) => {
+//     Book.findById(req.params.bid, (err, book) => {
+//       shelf.books.remove(book);
+//       shelf.save( (err) => {
+//         book.remove( (err) => {
+//           if (err) res.json(err)
+//           res.json(1)
+//         });
+//       });
+//     });
+//   });
+// })
+
+//delete one child - from class
 app.delete('/bookshelves/:sid/book/:bid', (req, res) => {
-  Bookshelf.findById(req.params.sid, function (err, shelf) {
-    Book.findById(req.params.bid, function (err, book) {
-      shelf.books.remove(book);
-      shelf.save(function (err) {
-        book.remove(function (err) {
-          if (err) res.json(err)
-          res.json(shelf)
-        });
-      });
-    });
-  });
+  Bookshelf.findById(req.params.sid, (err, shelf) => {
+    shelf.books.pull(req.params.bid)
+    shelf.save( err => {
+      if (err) res.json(err)
+      Book.findByIdAndDelete(req.params.bid, (err) => {
+        if (err) res.json(err)
+        res.json(1)
+      })
+    })
+  })
 })
 
 app.get('/', (req, res) => {
