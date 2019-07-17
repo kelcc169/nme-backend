@@ -84,8 +84,7 @@ app.delete('/bookshelves/:sid/book/:bid', (req, res) => {
     Book.findById(req.params.bid, function (err, book) {
       shelf.books.remove(book);
       shelf.save(function (err) {
-        book.bookshelf.remove(shelf);
-        book.save(function (err) {
+        book.remove(function (err) {
           if (err) res.json(err)
           res.json(shelf)
         });
